@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Capacity Verified 24/7 Shift Roster</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- EMBEDDED CSS STYLING --- */
+        :root {
+            --color-primary: #007bff;
+            --color-secondary: #6c757d;
+            --color-bg-light: #f4f7f6;
+            --color-text: #333;
+            
+            /* Shift Colors */
+            --color-shift-A: #4CAF50; /* Green */ 
+            --color-shift-B: #2196F3; /* Blue */
+            --color-shift-C: #FF9800; /* Orange */
+            --color-shift-G1: #9C27B0; /* Purple */
+            --color-shift-OFF: #495057; /* Dark Gray */
+            --color-weekend: #f0ad4e;
+            --color-off-match: #5cb85c; /* Success Green for Priority Match */
+            --color-swap-success: #28a745; 
+            --color-swap-fail: #dc3545; 
+            --color-leave: #ffc107; /* Yellow for leave balance */
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--color-bg-light);
+            margin: 0;
+            padding: 20px;
+            color: var(--color-text);
+        }
+
+        .container { max-width: 98%; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { color: var(--color-primary); font-weight: 700; margin-bottom: 5px; }
+
+        /* Controls and Forms */
+        .controls-bar {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+            gap: 20px;
+            padding: 15px 0; 
+            margin-bottom: 20px; 
+            border-bottom: 2px solid #ddd;
+        }
+        .preference-form-container, .date-control, .capacity-key {
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #ffffff;
+        }
+        .preference-form-container { flex-grow: 1; }
+        .preference-form-container h3 { margin-top: 0; color: var(--color-primary); font-size: 1.1em; margin-bottom: 10px; }
+        .preference-input-group { display: flex; flex-direction: column; gap: 10px; }
+        .preference-selectors { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .preference-selectors label { font-weight: 500; white-space: nowrap; }
+        .preference-selectors select, .preference-selectors button, .date-control input {
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.9em;
+        }
+        #date-priority-list {
+            margin-top: 5px; padding: 5px; border: 1px dashed #ccc; min-height: 25px; 
+            font-size: 0.85em; background-color: #f9f9f9;
+        }
+        .date-tag {
+            display: inline-block; background-color: var(--color-primary); color: white;
+            padding: 2px 6px; border-radius: 3px; margin-right: 5px; margin-bottom: 3px;
+        }
+        .preference-selectors button {
+            background-color: var(--color-secondary); color: white; cursor: pointer; border: none; flex-shrink: 0;
+        }
+        #attempt-swap-btn { background-color: var(--color-swap-success); color: white; font-weight: bold; }
+        #save-pdf-btn { background-color: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; }
+        
+        .capacity-key {
+            display: flex; flex-direction: column; gap: 5px; font-size: 0.85em;
+        }
+        .capacity-key .key-item {
+            display: inline-block; padding: 2px 6px; border-radius: 3px; color: white; font-weight: bold; text-align: center;
+        }
+        .capacity-key .shift-A { background-color: var(--color-shift-A); }
+        .capacity-key .shift-B { background-color: var(--color-shift-B); }
+        .capacity-key .shift-C { background-color: var(--color-shift-C); }
+        .capacity-key .shift-G1 { background-color: var(--color-shift-G1); }
+        .capacity-key .shift-OFF { background-color: var(--color-shift-OFF); }
+        .message-box {
+            margin-top: 10px; padding: 8px; border-radius: 4px; font-weight: bold; display: none;
+        }
+        .message-box.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .message-box.failure { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+
+        /* --- TABLE STICKY STYLES --- */
+        .roster-wrapper { overflow-x: auto; max-height: 70vh; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; }
+        .roster-table { width: 100%; border-collapse: collapse; font-size: 0.9em; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+        .roster-table th, .roster-table td { border: 1px solid #eee; padding: 8px 4px; text-align: center; min-width: 35px; white-space: nowrap; }
+        .roster-table thead { position: sticky; top: 0; background-color: var(--color-primary); color: white; z-index: 20; }
+        .sticky-col-name, .roster-table tbody td:first-child { min-width: 120px; text-align: left; position: sticky; left: 0; background-color: #e9ecef; font-weight: bold; z-index: 15; }
+        .sticky-col-gender, .roster-table tbody td:nth-child(2) { min-width: 70px; position: sticky; left: 120px; background-color: #f8f9fa; z-index: 15; }
+        .sticky-col-pref, .roster-table tbody td:nth-child(3) { 
+            min-width: 90px; position: sticky; left: 190px; background-color: #dee2e6;
+            font-size: 0.85em; font-weight: bold; z-index: 15;
+        }
+        .sticky-col-leave, .roster-table tbody td:nth-child(4) { 
+            min-width: 80px; position: sticky; left: 280px; background-color: var(--color-leave); 
+            color: var(--color-text); font-weight: bold; z-index: 15;
+        }
+        
+        /* Shift Cell Colors */
+        .shift-A { background-color: var(--color-shift-A); color: white; }
+        .shift-B { background-color: var(--color-shift-B); color: white; }
+        .shift-C { background-color: var(--color-shift-C); color: white; }
+        .shift-G1 { background-color: var(--color-shift-G1); color: white; }
+        .shift-OFF { background-color: var(--color-shift-OFF); color: white; }
+        .preferred-off { 
+            background-color: var(--color-off-match) !important; 
+            color: white !important; 
+            border: 2px solid white;
+        }
+        .error-cell { background-color: var(--color-swap-fail); color: white; font-weight: bold; }
+        .weekend-day { background-color: var(--color-weekend); }
+        .roster-table tbody tr:has(td:nth-child(2):contains('F')) {
+             background-color: #fff3cd; /* Light yellow background for female rows */
+        }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); padding-top: 60px; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        #calendar-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
+        .calendar-header { text-align: center; font-weight: bold; padding: 5px 0; background-color: #eee; border-radius: 4px; }
+        .calendar-day { padding: 10px; text-align: center; border: 1px solid #ddd; cursor: pointer; border-radius: 4px; font-weight: 500; transition: background-color 0.2s; }
+        .calendar-day.selected { background-color: var(--color-primary); color: white; border-color: var(--color-primary); }
+        #limit-message { margin-top: 10px; font-weight: bold; color: var(--color-swap-fail); }
+
+        /* --- PRINT STYLES (PDF Output) --- */
+        @media print {
+            body { 
+                background-color: white !important; 
+                padding: 0; 
+                margin: 0;
+            }
+            .controls-bar, #save-pdf-btn, .message-box, .date-control, .capacity-key { 
+                display: none !important; 
+            }
+            .roster-wrapper { 
+                overflow: visible !important; 
+                max-height: none !important; 
+                border: none !important; 
+                box-shadow: none !important;
+            }
+            /* Override sticky for printing */
+            .roster-table th, .roster-table td {
+                position: static !important;
+                background-color: inherit !important;
+                -webkit-print-color-adjust: exact; /* Force background colors to print */
+                color-adjust: exact;
+                font-size: 8pt; /* Smaller font for better fit */
+                padding: 5px 2px;
+            }
+            .roster-table thead, .roster-table tfoot {
+                background-color: var(--color-primary) !important;
+                color: white !important;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Core Capacity Verified 24/7 Shift Roster</h1>
+            <p class="subtitle">
+                **COMPULSORY DAILY RULES:** A: **4** | B: **5** | C: **3** | G1: **2** | OFF: **4** | **MAX OFF PER PERSON: 8**
+            </p>
+            <p style="color: var(--color-swap-fail); font-weight: bold;">
+                **GENDER CONSTRAINT ACTIVE:** Female staff (F) are only assigned to **A-Shift, G1-Shift, or OFF**.
+            </p>
+        </header>
+        
+        <div class="controls-bar">
+            <div class="preference-form-container">
+                <h3>Set Priority Date & Attempt Rule-Governed Swap</h3>
+                <div class="preference-input-group">
+                    <div class="preference-selectors">
+                        <label for="staff-select">Staff:</label>
+                        <select id="staff-select"></select>
+                        
+                        <button id="open-calendar-btn">Select Priority Dates</button>
+                        <button id="clear-preferences-btn">Clear All</button>
+                    </div>
+
+                    <div id="date-priority-list">No dates set.</div>
+                    
+                    <button id="attempt-swap-btn">Attempt Swap for ALL Priority Dates</button>
+                    <div id="message-box" class="message-box"></div>
+                </div>
+            </div>
+            
+            <div class="date-control">
+                <label for="start-date">Select Roster Start Date (Day 1 of Month):</label>
+                <input type="date" id="start-date" value="2025-11-01">
+                <p id="month-days-info" style="font-size: 0.8em; margin-top: 5px;">Roster Length: 30 days</p>
+            </div>
+            
+            <div class="capacity-key">
+                <span class="key-item shift-A">A (4)</span>
+                <span class="key-item shift-B">B (5)</span>
+                <span class="key-item shift-C">C (3)</span>
+                <span class="key-item shift-G1">G1 (2)</span>
+                <span class="key-item shift-OFF">OFF (4)</span>
+                <span class="key-item" style="background-color: var(--color-off-match); color: white;">Priority Match</span>
+            </div>
+        </div>
+
+        <button id="save-pdf-btn">⬇️ Generate and Save Roster as PDF 🖨️</button>
+
+        <div class="roster-wrapper">
+            <table id="roster-table" class="roster-table">
+                <thead>
+                    <tr id="day-name-row" class="header-row">
+                        <th class="sticky-col-name">Day Name</th>
+                        <th class="sticky-col-gender"></th>
+                        <th class="sticky-col-pref"></th>
+                        <th class="sticky-col-leave"></th>
+                    </tr>
+                    <tr id="day-number-row" class="header-row">
+                        <th class="sticky-col-name">Name</th>
+                        <th class="sticky-col-gender">Gender</th>
+                        <th class="sticky-col-pref">OFF Priority</th>
+                        <th class="sticky-col-leave">Leave Bal.</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot id="capacity-footer"></tfoot>
+            </table>
+        </div>
+
+    </div>
+
+    <div id="dateModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Select Priority OFF Dates</h2>
+            <p>Staff: <strong id="modal-staff-name"></strong></p>
+            <p>Click up to **8 dates** to set as priority OFF days for this staff member.</p>
+            <div id="limit-message">0 dates selected / 8 max</div>
+
+            <div id="calendar-container"></div>
+            
+            <button id="save-dates-btn" style="margin-top: 20px; padding: 10px 20px; background-color: var(--color-primary); color: white; border: none; border-radius: 4px;">Save & Close</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. Static Data & System Constants (The Rules) ---
+        let MONTH_DAYS = 30; // Dynamically set
+        const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];  
+        const MAX_PREFERENCE_DATES = 8;
+        const ALLOWED_FEMALE_SHIFTS = ['A', 'G1', 'OFF']; 
+        
+        // Daily Minimum Requirements (CORE_RULES)
+        const CORE_RULES = { A: 4, B: 5, C: 3, G1: 2, OFF: 4 };
+        const SHIFT_CAPACITIES = CORE_RULES;  
+        const ALL_SHIFTS = Object.keys(CORE_RULES).filter(s => s !== 'OFF'); // A, B, C, G1
+        const MAX_OFF_PER_PERSON = 8; 
+
+        // Initial STAFF_SCHEDULES data structure: 
+        // [Name, Gender, PreferenceDates (Array), Schedule (Array), TotalOffCount, AnnualLeaveBalance]
+        const DEFAULT_SCHEDULE = ['A', 'A', 'A', 'A', 'G1', 'OFF', 'OFF', 'G1', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'G1', 'G1', 'OFF']; 
+        
+        // Initial leave balance set to 10 for all staff for demonstration
+        const STAFF_SCHEDULES = [
+            // FEMALE STAFF
+            ['Varsha', 'F', [], [...DEFAULT_SCHEDULE], 8, 10],
+            ['Shruti', 'F', [], ['G1', 'G1', 'G1', 'G1', 'A', 'A', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'G1', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'G1', 'G1', 'OFF', 'OFF', 'A', 'OFF'], 8, 10],
+            ['Nandini', 'F', [], ['A', 'A', 'G1', 'G1', 'A', 'A', 'A', 'OFF', 'OFF', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'G1', 'OFF'], 8, 10],
+            ['Shivani', 'F', [], ['A', 'G1', 'A', 'A', 'OFF', 'OFF', 'A', 'A', 'A', 'OFF', 'OFF', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'OFF', 'OFF'], 8, 10],
+            
+            // MALE STAFF
+            ['Jashpal', 'M', [], ['C', 'C', 'C', 'C', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'G1', 'G1', 'G1', 'G1', 'G1', 'OFF', 'OFF', 'A', 'A', 'OFF'], 8, 10],
+            ['Rahul', 'M', [], ['B', 'B', 'B', 'B', 'C', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'G1', 'G1', 'OFF'], 8, 10], 
+            ['Mithlesh', 'M', [], ['B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF', 'OFF', 'A', 'A', 'G1', 'G1', 'OFF', 'OFF'], 8, 10],
+            ['Devesh', 'M', [], ['A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF', 'OFF'], 8, 10],
+            ['Bhupender', 'M', [], ['B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'B', 'OFF'], 8, 10],
+            ['Ashish', 'M', [], ['B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'OFF', 'OFF'], 8, 10],
+            ['Dikshant', 'M', [], ['C', 'G1', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'A', 'G1', 'OFF'], 8, 10], 
+            ['Deepak', 'M', [], ['OFF', 'C', 'G1', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'OFF'], 8, 10],
+            ['Shivam', 'M', [], ['OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF', 'OFF', 'A', 'OFF'], 8, 10],
+            ['Pankaj', 'M', [], ['B', 'B', 'B', 'B', 'G1', 'OFF', 'OFF', 'A', 'A', 'A', 'OFF', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'B', 'B', 'OFF', 'B', 'B', 'B', 'OFF', 'A', 'A', 'OFF'], 8, 10], 
+            ['Asgar', 'M', [], ['C', 'C', 'C', 'C', 'OFF', 'C', 'C', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'B', 'B', 'B', 'OFF', 'B', 'B', 'B', 'OFF', 'OFF', 'OFF'], 8, 10],
+            ['Mohd Ashu', 'M', [], ['OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF'], 8, 10],
+            ['Asvini', 'M', [], ['OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'A', 'G1', 'G1', 'A', 'OFF'], 8, 10],
+            ['Vinayak', 'M', [], ['A', 'B', 'B', 'B', 'B', 'B', 'OFF', 'OFF', 'A', 'A', 'A', 'OFF', 'A', 'A', 'A', 'A', 'OFF', 'OFF', 'C', 'C', 'C', 'C', 'C', 'OFF', 'OFF', 'B', 'B', 'B', 'B', 'OFF', 'OFF'] , 8, 10]
+        ];
+
+
+        // --- 2. Core Roster Rendering Functions ---
+        
+        function getStaffEntry(name) {
+            return STAFF_SCHEDULES.find(s => s[0] === name);
+        }
+        
+        // Helper function to calculate days in the month (28, 29, 30, 31)
+        function getDaysInMonth(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            // Setting date to 0 returns the last day of the previous month (i.e., the number of days in the month)
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function createTableHeader() {
+            const startDateInput = document.getElementById('start-date');
+            
+            let startDate;
+            try {
+                // Ensure the roster always starts on the 1st of the month
+                startDate = new Date(startDateInput.value + 'T00:00:00');
+                if (isNaN(startDate.getTime())) throw new Error("Invalid date");
+                startDate.setDate(1); 
+                startDateInput.value = startDate.toISOString().split('T')[0];
+            } catch (e) {
+                // Fallback
+                startDate = new Date('2025-11-01T00:00:00');
+                startDateInput.value = '2025-11-01';
+            }
+            
+            // Dynamically set MONTH_DAYS 
+            MONTH_DAYS = getDaysInMonth(startDate);
+            document.getElementById('month-days-info').textContent = `Roster Length: ${MONTH_DAYS} days`;
+
+            const dayNameRow = document.getElementById('day-name-row');
+            const dayNumberRow = document.getElementById('day-number-row');
+
+            // Clear previous headers (4 fixed sticky columns now)
+            while (dayNameRow.children.length > 4) { dayNameRow.removeChild(dayNameRow.lastChild); }  
+            while (dayNumberRow.children.length > 4) { dayNumberRow.removeChild(dayNumberRow.lastChild); }
+            
+            const dayDateStrings = [];  
+            
+            for (let i = 0; i < MONTH_DAYS; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dayName = DAY_NAMES[currentDate.getDay()];
+                const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;  
+                
+                const dateStr = currentDate.toISOString().split('T')[0]; 
+                dayDateStrings.push(dateStr);
+
+                // Day Name Row
+                const thName = document.createElement('th'); thName.textContent = dayName;
+                if (isWeekend) { thName.classList.add('weekend-day'); }
+                dayNameRow.appendChild(thName);
+
+                // Day Number Row
+                const thNum = document.createElement('th'); thNum.textContent = currentDate.getDate();
+                if (isWeekend) { thNum.classList.add('weekend-day'); }
+                dayNumberRow.appendChild(thNum);
+            }
+            
+            document.getElementById('roster-table').dayDateStrings = dayDateStrings;
+
+            // Total OFF Column Headers
+            const thTotalOffName = document.createElement('th'); thTotalOffName.textContent = 'Total OFF'; dayNameRow.appendChild(thTotalOffName);
+            const thTotalOffNum = document.createElement('th'); thTotalOffNum.textContent = 'Total OFF'; dayNumberRow.appendChild(thTotalOffNum);
+        }
+
+        function populateTableBody() {
+            const tbody = document.querySelector('#roster-table tbody');
+            tbody.innerHTML = '';  
+            const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+
+            STAFF_SCHEDULES.forEach(staffData => {
+                const [name, gender, preferenceDates, schedule, , leaveBalance] = staffData;
+                const row = document.createElement('tr');
+                
+                // Sticky Name/Gender/Pref/Leave Cells
+                const nameCell = document.createElement('td'); nameCell.textContent = name; nameCell.classList.add('sticky-col-name'); row.appendChild(nameCell);
+                const genderCell = document.createElement('td'); genderCell.textContent = gender; genderCell.classList.add('sticky-col-gender'); row.appendChild(genderCell);
+
+                const preferenceCell = document.createElement('td');
+                const currentMonthPreferences = preferenceDates.filter(date => dayDateStrings.includes(date));
+                preferenceCell.textContent = `${currentMonthPreferences.length}/${MAX_OFF_PER_PERSON} Set`;
+                preferenceCell.classList.add('sticky-col-pref');
+                row.appendChild(preferenceCell);
+
+                const leaveCell = document.createElement('td');
+                leaveCell.textContent = leaveBalance;
+                leaveCell.classList.add('sticky-col-leave');
+                row.appendChild(leaveCell);
+
+
+                // Schedule Cells - Loop up to the dynamic MONTH_DAYS
+                let currentTotalOff = 0;
+                for(let i = 0; i < MONTH_DAYS; i++) { 
+                    const shift = schedule[i] || 'N/A';
+                    const cell = document.createElement('td');
+                    cell.textContent = shift;
+                    cell.className = `shift-${shift}`;
+                    
+                    const currentDateString = dayDateStrings[i];
+                    
+                    if (shift === 'OFF') {
+                        currentTotalOff++;
+                    }
+                    
+                    if (currentMonthPreferences.includes(currentDateString)) {
+                        cell.classList.add('preferred-off');
+                    }
+                    
+                    row.appendChild(cell);
+                }
+
+                // Total OFF Count Cell
+                const totalOffCell = document.createElement('td');
+                staffData[4] = currentTotalOff; // Update TotalOffCount (Index 4)
+                totalOffCell.textContent = currentTotalOff;
+                totalOffCell.style.fontWeight = 'bold';
+                row.appendChild(totalOffCell);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateDailyCounts(dayIndex) {
+            const counts = {};
+            Object.keys(SHIFT_CAPACITIES).forEach(shift => counts[shift] = 0);
+            
+            STAFF_SCHEDULES.forEach(staffData => {
+                if (dayIndex < MONTH_DAYS) { 
+                    const shift = staffData[3][dayIndex];
+                    if (shift in counts) {
+                        counts[shift]++;
+                    }
+                }
+            });
+            return counts;
+        }
+
+        function createTableFooter() {
+            const footer = document.getElementById('capacity-footer');
+            footer.innerHTML = '';  
+
+            const allShiftKeys = Object.keys(SHIFT_CAPACITIES);
+            
+            const dailyCountsMatrix = {};
+            allShiftKeys.forEach(shift => {
+                dailyCountsMatrix[shift] = new Array(MONTH_DAYS).fill(0);
+            });
+
+            for(let dayIndex = 0; dayIndex < MONTH_DAYS; dayIndex++) {
+                const counts = calculateDailyCounts(dayIndex);
+                for (let shift in counts) {
+                    dailyCountsMatrix[shift][dayIndex] = counts[shift];
+                }
+            }
+            
+            allShiftKeys.forEach(shift => {
+                const row = document.createElement('tr');
+                
+                const headerCell = document.createElement('th');
+                // The new sticky columns mean we need colspan 4 here (Name, Gender, Pref, Leave)
+                headerCell.setAttribute('colspan', 4);  
+                headerCell.textContent = `Shift ${shift} (Min: ${SHIFT_CAPACITIES[shift]})`;
+                headerCell.classList.add(`shift-${shift}`);  
+                row.appendChild(headerCell);
+
+                let totalShiftCount = 0;
+                
+                for (let dayIndex = 0; dayIndex < MONTH_DAYS; dayIndex++) { 
+                    const count = dailyCountsMatrix[shift][dayIndex];
+                    const cell = document.createElement('th');
+                    cell.textContent = count;
+                    cell.classList.add(`shift-${shift}`);
+                    
+                    if (count < SHIFT_CAPACITIES[shift]) {
+                        cell.classList.add('error-cell');  
+                    }
+                    
+                    totalShiftCount += count;
+                    row.appendChild(cell);
+                }
+
+                const totalCell = document.createElement('th');
+                totalCell.textContent = totalShiftCount;
+                totalCell.classList.add(`shift-${shift}`, 'total-capacity-cell');
+                row.appendChild(totalCell);
+                
+                footer.appendChild(row);
+            });
+        }
+
+
+        // --- 3. Preference Input & Swapping Handlers ---
+        
+        function showMessage(text, type) {
+            const box = document.getElementById('message-box');
+            box.innerHTML = text;  
+            box.className = `message-box ${type}`;
+            box.style.display = 'block';
+        }
+        
+        function hideMessage() {
+             const box = document.getElementById('message-box');
+             box.style.display = 'none';
+        }
+
+        function initializeStaffSelect() {
+            const staffSelect = document.getElementById('staff-select');
+            staffSelect.innerHTML = '';  
+            
+            STAFF_SCHEDULES.forEach(staffData => {
+                const [name, , preferenceDates, , , leaveBalance] = staffData;
+                const option = document.createElement('option');
+                option.value = name;
+                
+                const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+                const currentMonthPreferencesCount = preferenceDates.filter(date => dayDateStrings.includes(date)).length;
+
+                option.textContent = `${name} (OFF: ${currentMonthPreferencesCount}/${MAX_PREFERENCE_DATES}, Leave: ${leaveBalance})`;
+                staffSelect.appendChild(option);
+            });
+
+            updateDatePriorityDisplay();
+        }
+
+        function updateDatePriorityDisplay() {
+            const staffSelect = document.getElementById('staff-select');
+            const dateListDiv = document.getElementById('date-priority-list');
+            const selectedStaffName = staffSelect.value;
+            const staffEntry = getStaffEntry(selectedStaffName);
+            const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+
+
+            if (!staffEntry) {
+                dateListDiv.innerHTML = 'No staff selected.';
+                return;
+            }
+
+            const preferenceDates = staffEntry[2].filter(date => dayDateStrings.includes(date));
+            
+            if (preferenceDates.length === 0) {
+                dateListDiv.innerHTML = 'No dates set for this month.';
+            } else {
+                dateListDiv.innerHTML = preferenceDates.map(dateStr => {
+                    const parts = dateStr.split('-');
+                    const displayDate = `${parts[2]}-${parts[1]}`; 
+                    return `<span class="date-tag">${displayDate}</span>`;
+                }).join('');
+            }
+            hideMessage();
+        }
+        
+        function handleClearPreferences() {
+            const staffSelect = document.getElementById('staff-select');
+            const selectedStaffName = staffSelect.value;
+
+            if (!selectedStaffName) return;
+
+            if (confirm(`Are you sure you want to clear ALL priority dates for ${selectedStaffName}? This will NOT revert any previous successful swaps.`)) {
+                const staffEntry = getStaffEntry(selectedStaffName);
+                staffEntry[2] = [];  
+
+                initializeStaffSelect();
+                staffSelect.value = selectedStaffName;
+                updateDatePriorityDisplay();
+                populateTableBody();  
+                showMessage(`All priority dates cleared for **${selectedStaffName}**.`, 'success');
+            }
+        }
+        
+        // --- 4. MODAL CALENDAR LOGIC (Simplified) ---
+
+        function openCalendarModal() {
+            const staffSelect = document.getElementById('staff-select');
+            const selectedStaffName = staffSelect.value;
+            const staffEntry = getStaffEntry(selectedStaffName);
+            
+            if (!staffEntry) return;
+
+            const modal = document.getElementById('dateModal');
+            document.getElementById('modal-staff-name').textContent = selectedStaffName;
+            
+            generateCalendar(staffEntry[2].slice()); 
+            modal.style.display = 'block';
+        }
+        
+        function closeCalendarModal() {
+            document.getElementById('dateModal').style.display = 'none';
+        }
+
+        function generateCalendar(currentPreferences) {
+            const calendarContainer = document.getElementById('calendar-container');
+            calendarContainer.innerHTML = '';
+            
+            calendarContainer.currentPreferences = currentPreferences;
+
+            // Day Headers
+            DAY_NAMES.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                calendarContainer.appendChild(header);
+            });
+            
+            const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+            if (dayDateStrings.length === 0) return;
+
+            const firstDate = new Date(dayDateStrings[0] + 'T00:00:00');
+            const startDayOfWeek = firstDate.getDay();  
+            
+            // Empty slots for days before the start date
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day inactive';
+                calendarContainer.appendChild(emptyDay);
+            }
+
+            // Actual Roster Days - Loop up to the dynamic MONTH_DAYS
+            for(let i = 0; i < MONTH_DAYS; i++) {
+                const dateStr = dayDateStrings[i];
+                const dayDiv = document.createElement('div');
+                const dateNum = new Date(dateStr + 'T00:00:00').getDate();
+                
+                dayDiv.textContent = dateNum;
+                dayDiv.className = 'calendar-day';
+                dayDiv.setAttribute('data-date', dateStr);
+
+                if (currentPreferences.includes(dateStr)) {
+                    dayDiv.classList.add('selected');
+                }
+                
+                dayDiv.addEventListener('click', handleDateClick);
+                calendarContainer.appendChild(dayDiv);
+            }
+            
+            updateLimitMessage();
+        }
+
+        function handleDateClick(event) {
+            const dayDiv = event.currentTarget;
+            const dateStr = dayDiv.getAttribute('data-date');
+            const calendarContainer = document.getElementById('calendar-container');
+            let preferenceDates = calendarContainer.currentPreferences; 
+
+            if (dayDiv.classList.contains('selected')) {
+                // Deselect: remove date
+                dayDiv.classList.remove('selected');
+                calendarContainer.currentPreferences = preferenceDates.filter(d => d !== dateStr);
+            } else {
+                // Select: add date, check limit
+                if (preferenceDates.length < MAX_PREFERENCE_DATES) {
+                    dayDiv.classList.add('selected');
+                    preferenceDates.push(dateStr);
+                    preferenceDates.sort(); 
+                    calendarContainer.currentPreferences = preferenceDates;
+                } else {
+                    alert(`Maximum of ${MAX_PREFERENCE_DATES} dates already selected.`);
+                }
+            }
+            updateLimitMessage();
+        }
+        
+        function updateLimitMessage() {
+            const calendarContainer = document.getElementById('calendar-container');
+            const count = calendarContainer.currentPreferences ? calendarContainer.currentPreferences.length : 0;
+            
+            const messageDiv = document.getElementById('limit-message');
+            messageDiv.innerHTML = `**${count}** dates selected / **${MAX_PREFERENCE_DATES}** max`;
+            
+            if (count === MAX_PREFERENCE_DATES) {
+                messageDiv.style.color = 'var(--color-off-match)';
+            } else {
+                messageDiv.style.color = 'var(--color-swap-fail)';
+            }
+        }
+        
+        function handleSaveDates() {
+            const staffSelect = document.getElementById('staff-select');
+            const staffEntry = getStaffEntry(staffSelect.value);
+            const calendarContainer = document.getElementById('calendar-container');
+
+            if (staffEntry && calendarContainer.currentPreferences) {
+                 staffEntry[2] = calendarContainer.currentPreferences;
+            }
+            
+            closeCalendarModal();
+            initializeStaffSelect();  
+            updateDatePriorityDisplay();  
+            populateTableBody();  
+            showMessage('Priority dates saved. Click **"Attempt Swap"** to apply changes.', 'success');
+        }
+
+
+        // --- 5. The Core Swapping Logic (User Preference) ---
+
+        function attemptSwapForAll() {
+            const staffSelect = document.getElementById('staff-select');
+            const selectedStaffName = staffSelect.value;
+            if (!selectedStaffName) return;
+
+            const staffEntry = getStaffEntry(selectedStaffName);
+            const preferenceDates = staffEntry[2];
+            
+            const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+            
+            const currentMonthPreferences = preferenceDates.filter(date => dayDateStrings.includes(date));
+
+            if (currentMonthPreferences.length === 0) {
+                 showMessage(`No priority dates set for the current month for **${selectedStaffName}**.`, 'failure');
+                 return;
+            }
+            
+            let successfulSwaps = 0;
+            let failureMessages = [];
+
+            currentMonthPreferences.forEach(dateString => {
+                const result = attemptSingleSwap(selectedStaffName, dateString);
+                
+                if (result.success && result.message.includes('Swapped')) {
+                    successfulSwaps++;
+                } else if (!result.success) {
+                    failureMessages.push(`On ${dateString}: ${result.message}`);
+                }
+            });
+
+            populateTableBody();
+            createTableFooter();  
+            initializeStaffSelect();  
+
+            let finalMessage = `Swap attempt complete for **${selectedStaffName}**. `;
+            if (successfulSwaps > 0) {
+                finalMessage += `**${successfulSwaps} Shift Swaps Performed** to meet preferences.`;
+            } else {
+                 finalMessage += `No shifts were swapped (Staff was already OFF or no partner found).`;
+            }
+
+            if (failureMessages.length > 0) {
+                const failuresHtml = failureMessages.map(msg => `<li>${msg}</li>`).join('');
+                showMessage(`${finalMessage}<br><br>**Failures due to Rules/Capacity:**<ul>${failuresHtml}</ul>`, 'failure');
+            } else {
+                showMessage(finalMessage, 'success');
+            }
+        }
+
+        /**
+         * Attempts a single shift swap for a preferred day (dateString).
+         */
+        function attemptSingleSwap(staffName, dateString) {
+            const dayDateStrings = document.getElementById('roster-table').dayDateStrings || [];
+            const dateIndex = dayDateStrings.indexOf(dateString);
+            if (dateIndex === -1) return { success: false, message: 'Roster day outside current month range.' };
+
+            const staffA = getStaffEntry(staffName);
+            const shiftA = staffA[3][dateIndex];
+            
+            if (shiftA === 'OFF') return { success: true, message: `Already OFF on ${dateString}.` };
+
+            // 1. Check Max OFF constraint
+            if (staffA[4] >= MAX_OFF_PER_PERSON) {
+                return { success: false, message: `Swap failed: **${staffName}** has reached the **Max OFF limit (${MAX_OFF_PER_PERSON})**.` };
+            }
+            
+            // 2. Check Leave Balance constraint (NEW)
+            if (staffA[5] <= 0) { 
+                return { success: false, message: `Swap failed: **${staffName}** has **0 remaining leave balance** for adjustment.` };
+            }
+
+            // 3. Find a suitable swap partner (Staff B) who is currently OFF
+            for (const staffB of STAFF_SCHEDULES) {
+                if (staffB[0] === staffName) continue; 
+                
+                const shiftB = staffB[3][dateIndex];
+                if (shiftB !== 'OFF') continue; 
+                
+                const newShiftA = shiftB; // Staff A receives 'OFF'
+                const newShiftB = shiftA; // Staff B receives Staff A's current shift
+                
+                // GENDER CONSTRAINT CHECK
+                if (staffB[1] === 'F' && !ALLOWED_FEMALE_SHIFTS.includes(newShiftB)) {
+                    continue; 
+                }
+                
+                // 4. Perform the swap.
+                staffA[3][dateIndex] = newShiftA; 
+                staffB[3][dateIndex] = newShiftB; 
+                
+                // 5. Update OFF counts
+                staffA[4]++;  
+                staffB[4]--;  
+                
+                // 6. Adjust Leave Balance (NEW)
+                staffA[5]--; 
+                
+                // 7. Simulate Payer/HR notification (NEW)
+                console.log(`Payer/HR Notification: **Leave Deducted!** ${staffA[0]} took leave on ${dateString}. New Balance: ${staffA[5]}`);
+
+                return { 
+                    success: true, 
+                    message: `Swapped **${shiftA}** with **${staffB[0]}**'s OFF. **${staffA[0]}** now OFF on ${dateString}. Leave Balance deducted (New Balance: ${staffA[5]}).` 
+                };
+            }
+
+            return { success: false, message: `Swap failed: Could not find a suitable OFF partner meeting all rules.` };
+        }
+
+        // --- 6. AUTOMATIC LOGIC FOR ALL DAYS ---
+
+        /**
+         * Iterates through the entire month, checks capacity rules daily, and swaps staff
+         * to fix under-capacity issues where possible, respecting the gender constraint.
+         * NOTE: This automatic swap DOES NOT affect the AnnualLeaveBalance. 
+         * Leave adjustment is only triggered by the user's manual priority swap.
+         */
+        function applyAutomaticRosterLogic() {
+            let totalSwaps = 0;
+
+            for (let dayIndex = 0; dayIndex < MONTH_DAYS; dayIndex++) {
+                let counts = calculateDailyCounts(dayIndex);
+                let daySwaps = 0;
+
+                // 1. Prioritize fixing UNDER-CAPACITY shifts (A, B, C, G1)
+                for (const targetShift of ALL_SHIFTS) {
+                    while (counts[targetShift] < CORE_RULES[targetShift]) {
+                        
+                        // Find an over-capacity OFF staff member to take the targetShift
+                        let bestOffStaff = STAFF_SCHEDULES.find(staff => {
+                            const staffShift = staff[3][dayIndex];
+                            
+                            // 1. Must be OFF
+                            if (staffShift !== 'OFF') return false;
+
+                            // 2. Gender Constraint Check 
+                            if (staff[1] === 'F' && (targetShift === 'B' || targetShift === 'C')) return false;
+
+                            // 3. Must be an over-capacity OFF
+                            return counts['OFF'] > CORE_RULES['OFF'];
+                        });
+
+                        if (bestOffStaff) {
+                            // Perform Swap: OFF staff takes the targetShift
+                            bestOffStaff[3][dayIndex] = targetShift;
+                            bestOffStaff[4]--; // OFF count decreases
+                            
+                            // Update counts and move to the next iteration of the while loop
+                            counts = calculateDailyCounts(dayIndex); 
+                            daySwaps++;
+                        } else {
+                            // Cannot fix this shift deficit, move to the next shift type
+                            break; 
+                        }
+                    }
+                }
+                totalSwaps += daySwaps;
+
+                // 2. Handle OVER-CAPACITY OFF shifts (less critical, mainly fixed by step 1)
+                while (counts['OFF'] > CORE_RULES['OFF']) {
+                    
+                    let staffToMove = STAFF_SCHEDULES.find(staff => staff[3][dayIndex] === 'OFF');
+
+                    if (staffToMove) {
+                        // Find an under-capacity non-OFF shift to move the staff member to
+                        let potentialShifts = ALL_SHIFTS
+                            .filter(shift => counts[shift] < CORE_RULES[shift]) 
+                            .sort((a, b) => counts[a] - counts[b]); 
+
+                        // Apply Gender Constraint before assignment
+                        if (staffToMove[1] === 'F') {
+                            potentialShifts = potentialShifts.filter(shift => ALLOWED_FEMALE_SHIFTS.includes(shift));
+                        }
+
+                        if (potentialShifts.length > 0) {
+                            // Assign to the most deficient (or first available) shift
+                            const newShift = potentialShifts[0];
+                            staffToMove[3][dayIndex] = newShift;
+                            staffToMove[4]--; 
+
+                            counts = calculateDailyCounts(dayIndex);
+                            daySwaps++;
+                            totalSwaps++;
+                        } else {
+                            break; 
+                        }
+
+                    } else {
+                        break; 
+                    }
+                }
+            }
+
+            console.log(`Automatic Roster Logic complete. Total automatic shifts adjusted: ${totalSwaps}`);
+        }
+
+
+        // --- 7. Initialization and Event Listeners ---
+
+        function handlePrintToPDF() {
+            window.print();
+        }
+
+        function updateRoster(runAutomaticLogic = false) {
+            createTableHeader();
+            if (runAutomaticLogic) {
+                applyAutomaticRosterLogic(); 
+            }
+            populateTableBody();
+            createTableFooter();
+            initializeStaffSelect(); 
+            hideMessage();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Run Roster logic ONCE on load, including the NEW automatic capacity logic
+            updateRoster(true); 
+
+            // Roster Logic Triggers
+            document.getElementById('start-date').addEventListener('change', () => updateRoster(true)); // Re-run logic on date change
+            document.getElementById('staff-select').addEventListener('change', updateDatePriorityDisplay);
+            document.getElementById('attempt-swap-btn').addEventListener('click', attemptSwapForAll);
+            document.getElementById('clear-preferences-btn').addEventListener('click', handleClearPreferences);
+
+            // PDF Save Option
+            document.getElementById('save-pdf-btn').addEventListener('click', handlePrintToPDF);
+
+            // Modal Logic Triggers
+            document.getElementById('open-calendar-btn').addEventListener('click', openCalendarModal);
+            document.querySelector('.close-btn').addEventListener('click', closeCalendarModal);
+            document.getElementById('save-dates-btn').addEventListener('click', handleSaveDates);
+            window.addEventListener('click', (event) => {
+                if (event.target === document.getElementById('dateModal')) {
+                    handleSaveDates();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
